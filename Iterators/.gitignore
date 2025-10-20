@@ -1,0 +1,6 @@
+*.pdb
+.vscode/
+x64/
+*.vcxproj*
+.vs/
+*.sln
