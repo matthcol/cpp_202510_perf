@@ -6,7 +6,6 @@
 #include <iterator>
 
 #include "iotools.h"
-#include "ittools.h"
 
 void scenario1_iteration_historic() {
 	std::vector<int> data{ 12, 15, 20, 2, 99, 1, 54, 27, 33, 12 , 20};
@@ -243,7 +242,7 @@ void scenario5_helper_search(
 		std::cout << "Found: " << *it_search << std::endl;
 		++it_search;
 		// print 3 following elements if exists
-		for (int i = 0; i < 3; i++) {
+		for (int i = 0; i < 3; i++, ++it_search) {
 			if (it_search == last) break;
 			std::cout << "After: " << *it_search << std::endl;
 		}
@@ -256,6 +255,7 @@ void scenario5_algorithms() {
 	std::vector<double> temperatures_big(1000000);
 
 	print_iterable(temperatures.cbegin(), temperatures.cend());
+
 	scenario5_helper_search(temperatures.cbegin(), temperatures.cend(), 277.0);
 	scenario5_helper_search(temperatures.cbegin(), temperatures.cend(), 28.3);
 	scenario5_helper_search(temperatures.cbegin(), temperatures.cend(), 13.75);
@@ -264,6 +264,8 @@ void scenario5_algorithms() {
 	scenario5_helper_search(temperatures.cbegin(), temperatures.cend(), 35.5);
 	scenario5_helper_search(temperatures.cbegin() + 3, temperatures.cend(), 35.5);
 	scenario5_helper_search(temperatures.cbegin() + 2, temperatures.cend() -4, 35.5);
+
+	print_iterable(temperatures_big.cbegin(), temperatures_big.cend(), "big: ", ", ");
 }
 
 int main() {
