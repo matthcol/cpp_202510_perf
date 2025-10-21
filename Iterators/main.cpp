@@ -1,11 +1,34 @@
+#include "iotools.h"
+
+// containers
 #include <vector>
-#include <iostream>
+#include <list>
 #include <set>
 #include <forward_list>
-#include <list>
-#include <iterator>
 
-#include "iotools.h"
+// io
+#include <iostream>
+
+// toolbox: iterator, functional, algorithm, random
+#include <iterator>
+#include <functional>
+#include <algorithm>
+#include <random>
+
+
+// pour les versions de MSVC qui definissent mal la variables __cplusplus
+#if defined(_MSVC_LANG)
+#define CPP_VERSION _MSVC_LANG
+#else
+#define CPP_VERSION __cplusplus
+#endif
+
+#if CPP_VERSION >= 202002L
+
+#include <ranges> // C++20
+
+#endif
+
 
 void scenario1_iteration_historic() {
 	std::vector<int> data{ 12, 15, 20, 2, 99, 1, 54, 27, 33, 12 , 20};
@@ -268,11 +291,169 @@ void scenario5_algorithms() {
 	print_iterable(temperatures_big.cbegin(), temperatures_big.cend(), "big: ", ", ");
 }
 
+bool is_hot(double temperature) {
+	return temperature >= 20.0;
+}
+
+void scenario_6_iterator_algorithm() {
+	std::vector<double> temperatures{ 12.5, 15.0, 20.3, -2.1, 0, 9.9, -1.5, 5.4 , 22, 1.3 };
+	std::vector<double> temperatures_big(1000000);
+	std::vector<double> hot_temperatures;
+	std::vector<double> extract_temperatures;
+
+	for (size_t i = 0; i < 100000; ++i) {
+		std::copy(temperatures.begin(), temperatures.end(), temperatures_big.begin() + i * 10);
+	}
+
+	print_iterable(temperatures_big.begin(), temperatures_big.begin() + 20, "Big temperatures first 20: ", ", ");
+	print_iterable(temperatures_big.end() - 20, temperatures_big.end(), "Big temperatures  last 20: ", ", ");
+
+	std::copy_if(temperatures_big.begin(), temperatures_big.end(), std::back_inserter(hot_temperatures), is_hot);
+
+	print_iterable(hot_temperatures.begin(), hot_temperatures.begin() + 20, "hot temperatures first: ", ", ");
+	print_iterable(hot_temperatures.end() - 20, hot_temperatures.end(), "hot_temperatures last: ", ", ");
+	double threshold = 0;
+	std::copy_if(
+		temperatures_big.begin(),
+		temperatures_big.end(),
+		std::back_inserter(extract_temperatures),
+		[threshold](double temperature) {return temperature < threshold; }
+	);
+	print_iterable(extract_temperatures.begin(), extract_temperatures.end(), "extracted temperature : ", ", ");
+	std::random_device rd;  // Source de vraie entropie
+	std::mt19937 gen(rd()); // Mersenne Twister
+	std::uniform_real_distribution<double> dist(0.0, 1.0);
+	std::vector<double> corrected_temperatures(extract_temperatures.size());
+	auto correct_temp = [&](double temperature) {return dist(gen) * temperature; };
+	// using transform
+	std::transform(
+		extract_temperatures.begin(),
+		extract_temperatures.end(),
+		extract_temperatures.begin(), // inplace
+		//corrected_temperatures.begin(), // new vector
+		correct_temp
+	);
+
+	print_iterable(extract_temperatures.begin(), extract_temperatures.end(), "corrected temperature : ", ", ");
+
+	// sorting a vector
+	std::sort(extract_temperatures.begin(), extract_temperatures.end());
+	print_iterable(extract_temperatures.begin(), extract_temperatures.end(), "sorted temperature ASC: ", ", ");
+	std::sort(extract_temperatures.begin(), extract_temperatures.end(), std::greater<double>());
+	print_iterable(extract_temperatures.begin(), extract_temperatures.end(), "sorted temperature DESC: ", ", ");
+	std::cout << "fin" << std::endl;
+}
+
+#if CPP_VERSION >= 202002L 
+void scenario_7_range_algorithm() {
+	std::vector<double> temperatures{ 12.5, 15.0, 20.3, -2.1, 0, 9.9, -1.5, 5.4 , 22, 1.3 };
+	std::vector<double> temperatures_big(1000000);
+	std::vector<double> hot_temperatures;
+	std::vector<double> extract_temperatures;
+
+	for (size_t i = 0; i < 100000; ++i) {
+		// compatibilité range vs 2 iterateurs
+		//std::ranges::copy(temperatures.begin(), temperatures.end(), temperatures_big.begin() + i * 10);
+		// 
+		// utiliser la surcharge R&& : conteneur std::vector correspond au concept des ranges
+		std::ranges::copy(temperatures, temperatures_big.begin() + i * 10);
+	}
+
+	print_iterable(temperatures_big.begin(), temperatures_big.begin() + 20, "Big temperatures first 20: ", ", ");
+	print_iterable(temperatures_big.end() - 20, temperatures_big.end(), "Big temperatures  last 20: ", ", ");
+
+	std::ranges::copy_if(temperatures_big, std::back_inserter(hot_temperatures), is_hot);
+
+	print_iterable(hot_temperatures.begin(), hot_temperatures.begin() + 20, "hot temperatures first: ", ", ");
+	print_iterable(hot_temperatures.end() - 20, hot_temperatures.end(), "hot_temperatures last: ", ", ");
+	double threshold = 0;
+	std::ranges::copy_if(
+		temperatures_big,
+		std::back_inserter(extract_temperatures),
+		[threshold](double temperature) {return temperature < threshold; }
+	);
+	print_iterable(extract_temperatures.begin(), extract_temperatures.end(), "extracted temperature : ", ", ");
+	std::random_device rd;  // Source de vraie entropie
+	std::mt19937 gen(rd()); // Mersenne Twister
+	std::uniform_real_distribution<double> dist(0.0, 1.0);
+	std::vector<double> corrected_temperatures(extract_temperatures.size());
+	auto correct_temp = [&](double temperature) {return dist(gen) * temperature; };
+	// using transform
+	std::ranges::transform(
+		extract_temperatures,
+		extract_temperatures.begin(), // inplace
+		correct_temp
+	);
+
+	print_iterable(extract_temperatures.begin(), extract_temperatures.end(), "corrected temperature : ", ", ");
+
+	// sorting a vector
+	std::ranges::sort(extract_temperatures);
+	print_iterable(extract_temperatures.begin(), extract_temperatures.end(), "sorted temperature : ", ", ");
+	std::ranges::sort(extract_temperatures, std::greater<double>());
+	print_iterable(extract_temperatures.begin(), extract_temperatures.end(), "sorted temperature : ", ", ");
+	std::cout << "fin" << std::endl;
+}
+
+void scenario_8_range_pipeline() {
+	std::vector<double> temperatures(1000000);
+	std::random_device rd;  // Source de vraie entropie
+	std::mt19937 gen(rd()); // Mersenne Twister
+	std::uniform_real_distribution<double> dist(-10.0, 40.0);
+
+	for (auto& t : temperatures) {
+		t = dist(gen);
+	}
+	print_range(temperatures.begin(), temperatures.end());
+	print_range(temperatures);
+
+	double threshold = 25;
+	auto result_lazy = temperatures
+		| std::views::filter([threshold](double t) {return t >= threshold; })
+		| std::views::transform([](double t) {return t * 0.95; })
+		| std::views::drop(200) // sauter 200 valeurs
+		| std::views::take(100) // prendre 100 valeurs uniquement
+		;
+	
+	// Consommation 1 : print
+	// print_range(result_lazy); // consomme l'objet Lazy du pipeline
+
+	// Consommation 2 : resultat final dans le conteneur
+	
+#if CPP_VERSION >= 202302L
+	// C++23
+	auto results = result_lazy | std::ranges::to<std::vector<double>>();
+#else
+	// C++20
+	std::vector<double> results;
+	for (auto t : result_lazy) {
+		results.push_back(t);
+	}
+#endif
+	
+	print_range(results);
+}
+
+#else
+// C++ anterieur a C++20
+
+void scenario_7_range_algorithm() {
+	std::cout << "Scenario non disponible avant C++20" << std::endl;
+}
+
+void scenario_8_range_pipeline() {
+	std::cout << "Scenario non disponible avant C++20" << std::endl;
+}
+#endif
+
 int main() {
-	//scenario1_iteration_historic();
-	//scenario2_print_iterable();
-	//scenario3_const_not_const_reverse_iteration();
-	//scenario4_range_for_loop();
+	scenario1_iteration_historic();
+	scenario2_print_iterable();
+	scenario3_const_not_const_reverse_iteration();
+	scenario4_range_for_loop();
 	scenario5_algorithms();
+	scenario_6_iterator_algorithm();
+	scenario_7_range_algorithm();
+	scenario_8_range_pipeline();
 	return 0;
 }
