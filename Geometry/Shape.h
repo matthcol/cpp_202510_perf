@@ -8,10 +8,13 @@ private:
 	std::string m_name;
 
 protected:
-	Shape();
+	// Shape(); // + impl dans le .cpp
+	Shape() = default; // oui il me convient
 	Shape(const std::string& name);
 
 public:
+	virtual ~Shape();
+
 	virtual void translate(double delta_x, double delta_y) =0;
 	virtual void translate(const std::pair<double, double>& delta_vector) =0;
 	virtual void translate(std::pair<double, double>&& delta_vector) = 0;
@@ -20,6 +23,5 @@ public:
 	
 	const std::string& name() const;
 	void set_name(const std::string& value);
-
 };
 
